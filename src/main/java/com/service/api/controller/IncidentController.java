@@ -18,4 +18,10 @@ public class IncidentController {
         return Arrays.asList("1","22","333","4444","55555");
     }
 
+
+    @GetMapping("/env")
+    public Map<String, String> getEnv() {
+        return new TreeMap<>(System.getenv());
+    }
+
 }
