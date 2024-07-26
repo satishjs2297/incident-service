@@ -6,10 +6,15 @@ import com.service.api.pdf.convert.DocxToPDFConverter;
 import com.service.api.utils.Docx4JSRUtil;
 import lombok.extern.java.Log;
 import org.docx4j.openpackaging.packages.WordprocessingMLPackage;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.*;
+import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -18,8 +23,8 @@ import java.util.Map;
 public class DocTemplateProcessController {
 
 
-    @GetMapping("/genpdf")
-    public String pdfGenerator() {
+    @GetMapping(value= "/genpdf", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+    public ResponseEntity<Resource> pdfGenerator() {
 
         try {
 
@@ -33,22 +38,25 @@ public class DocTemplateProcessController {
                     new File("C:/Users/satis/Downloads/incident-svc-api/src/main/resources/source2.docx"));
             Docx4JSRUtil.searchAndReplace(sourceDocxDoc, placeholderMap);
 
-            File exportFile = new File("C:/Users/satis/Downloads/incident-svc-api/target2.docx");
-            sourceDocxDoc.save(exportFile);
+            ByteArrayOutputStream targetOutputStream = new ByteArrayOutputStream();
+            sourceDocxDoc.save(targetOutputStream);
 
-            InputStream inStream = getInFileStream("C:/Users/satis/Downloads/incident-svc-api/target2.docx");
-            OutputStream outStream = getOutFileStream("C:/Users/satis/Downloads/incident-svc-api/output.pdf");
+            ByteArrayInputStream inStream = new ByteArrayInputStream(targetOutputStream.toByteArray());
 
-            Converter converter = new DocxToPDFConverter(inStream, outStream, false, true);
+            ByteArrayOutputStream pdfOutputStream = new ByteArrayOutputStream();
+            Converter converter = new DocxToPDFConverter(inStream, pdfOutputStream, false, true);
 
             converter.convert();
+
+            ByteArrayResource resource = new ByteArrayResource(pdfOutputStream.toByteArray());
+            return ResponseEntity.ok().contentType(MediaType.APPLICATION_OCTET_STREAM).body(resource);
 
         } catch (Exception ex) {
             log.warning("Failed to generate pdf ::"+ ex);
         }
 
+        return null;
 
-        return "Pdf successfully generated.";
     }
 
     protected static InputStream getInFileStream(String inputFilePath) throws FileNotFoundException {
